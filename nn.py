@@ -18,35 +18,64 @@ def softmax(X):
     return np.exp(X) / _sum
 
 class NN(object):
-    def __init__(self, num_input, num_hidden, num_output):
-        self._W1 = (np.random.random_sample((num_input, num_hidden)) - 0.5).astype(np.float32)
-        self._b1 = np.zeros((1, num_hidden)).astype(np.float32)
-        self._W2 = (np.random.random_sample((num_hidden, num_output)) - 0.5).astype(np.float32)
-        self._b2 = np.zeros((1, num_output)).astype(np.float32)
-
+    def __init__(self, sizes):
+	self.layers = len(sizes)
+	self.sizes = sizes
+	self._W =  [(np.random.random_sample((y, x))-0.5).astype(np.float32) for y, x in zip(sizes[:-1], sizes[1:])]
+	self._b = [np.zeros((1,x)).astype(np.float32) for  x in sizes[1:]]
+	
     def forward(self,X):
-        net1 = np.matmul( X, self._W1 ) + self._b1
-        y = sigmoid(net1)
-        net2 = np.matmul( y, self._W2 ) + self._b2
-        z = softmax(net2)
-        return z,y
+	rsizes = self.sizes
+	rsizes.reverse()
+	outputs =  [np.zeros((1,x)).astype(np.float32) for  x in rsizes[:-1]]
+	i=0
+	j=self.layers-2;
+	while i < self.layers-2:
+        	net = np.matmul( X, self._W[i] ) + self._b[i]
+        	y = sigmoid(net)
+		outputs[j] = y
+		X=y
+		i=i+1
+		j=j-1
+	net = np.matmul(X,self._W[i]) + self._b[i]
+	z = softmax(net)
+	outputs[j] = z
+        return outputs
 
-    def backpropagation(self, X, target, z, y, eta):
-        d2 = (z - target)
-        d1 = y*(1.0-y) * np.matmul(d2, self._W2.T)
-        self._W2 -= eta * np.matmul(y.T,d2)
-        self._W1 -= eta * np.matmul(X.reshape((-1,1)),d1)
-        self._b2 -= eta * d2
-        self._b1 -= eta * d1
+    def backpropagation(self, X, target, outputs , eta):
+        d = (outputs[0] - target)
+	self._W[self.layers-2] -= eta*np.matmul(outputs[1].T,d)
+	i=self.layers-3;
+	j=1
+	while i >0:
+		d = outputs[j]*(1.0-outputs[j])*np.matmul(d, self._W[i+1].T)
+		self._W[i] -= eta* np.matmul(outputs[j+1].T,d)
+		self._b[i] -= eta*d
+		i=i-1
+		j=j+1
+	d = outputs[j]*(1.0-outputs[j])*np.matmul(d,self._W[i+1].T)
+	self._W[i] -= eta*np.matmul(X.reshape(-1,1),d)	
+	self._b[i] -= eta*d
 
 
     def predict(self,X):
-	reg_lambda = 0.01
-	net1 = np.matmul( X, self._W1 ) + self._b1
-        y = sigmoid(net1)
-        net2 = np.matmul( y, self._W2 ) + self._b2
-        z = softmax(net2)
-	return z
+	rsizes = self.sizes
+        rsizes.reverse()
+        outputs =  [np.zeros((1,x)).astype(np.float32) for  x in rsizes[:-1]]
+        i=0
+        j=self.layers-2;
+        while i < self.layers-2:
+                net = np.matmul( X, self._W[i] ) + self._b[i]
+                y = sigmoid(net)
+                outputs[j] = y
+                X=y
+                i=i+1
+                j=j-1
+        net = np.matmul(X,self._W[i]) + self._b[i]
+        z = softmax(net)
+        outputs[j] = z
+        return outputs[0]
+
 
     def calculate_loss(self,X,y):
 	probs = []
@@ -153,11 +182,11 @@ def get_feature_importance(X,Y):
 from sklearn.model_selection import StratifiedShuffleSplit
 import matplotlib.pyplot as plt
 
-def train_and_cross_validate(n_input, n_hidden, n_output, num_hidden=8, n_epochs=10000,eta=0.01):
+def train_and_cross_validate(sizes, num_hidden=8, n_epochs=50000,eta=0.01):
 	
 	X_train, X_test, y_train, y_test,X,Y = prepare_data()
 	get_feature_importance(X,Y)
-	nn = NN(n_input,n_hidden,n_output)
+	nn = NN(sizes)
 	sss = StratifiedShuffleSplit(n_splits=3, test_size=0.3, random_state=0)
 
 	sss.get_n_splits(X, Y)
@@ -172,8 +201,8 @@ def train_and_cross_validate(n_input, n_hidden, n_output, num_hidden=8, n_epochs
     		iterations = []
     		for epoch in range(n_epochs):
         		for x, target in zip(X_train,y_train):
-	    			z, y = nn.forward(x)
-            			nn.backpropagation( x, target,z,y,eta)
+	    			outputs = nn.forward(x)
+            			nn.backpropagation( x, target,outputs,eta)
             			if epoch%100==0:
 	        			error.append(nn.calculate_loss(X_test,y_test))	
 	        			iterations.append(epoch)
@@ -198,4 +227,4 @@ def train_and_cross_validate(n_input, n_hidden, n_output, num_hidden=8, n_epochs
     		j=j+1
 
 if __name__=='__main__':
-	train_and_cross_validate(9,15,6);
+	train_and_cross_validate([9,5,4,6]);
