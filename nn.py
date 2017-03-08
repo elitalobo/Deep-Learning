@@ -23,10 +23,14 @@ class NN(object):
 	self.sizes = sizes
 	self._W =  [(np.random.random_sample((y, x))-0.5).astype(np.float32) for y, x in zip(sizes[:-1], sizes[1:])]
 	self._b = [np.zeros((1,x)).astype(np.float32) for  x in sizes[1:]]
+
+    def reinitalize(self,W,B):
+	self._W = np.loadtxt("nn_network_weights.txt")
+	self._b = np.loadtxt("nn_network_biases.txt")
 	
     def forward(self,X):
 	rsizes = self.sizes
-	rsizes.reverse()
+	rsizes = rsizes[::-1]
 	outputs =  [np.zeros((1,x)).astype(np.float32) for  x in rsizes[:-1]]
 	i=0
 	j=self.layers-2;
@@ -60,7 +64,7 @@ class NN(object):
 
     def predict(self,X):
 	rsizes = self.sizes
-        rsizes.reverse()
+        rsizes = rsizes[::-1]
         outputs =  [np.zeros((1,x)).astype(np.float32) for  x in rsizes[:-1]]
         i=0
         j=self.layers-2;
@@ -93,6 +97,48 @@ class NN(object):
 			import ipdb; ipdb.set_trace()
 		i=i+1
         return data_loss
+
+    def calculate_accuracy(self,X,y):
+        i=0
+	total =0.0
+        prediction_accuracy =0.0
+	correctly_predicted = 0.0
+        for x in X:
+                try:
+                        probs = self.predict(x)[0]
+                        total +=1
+
+                        correctly_predicted += np.argmax(probs)==np.argmax(y[i])
+                except:
+                        import ipdb; ipdb.set_trace()
+                i=i+1
+        return (correctly_predicted*1.0)/total;
+
+	
+    def calculate_confusion_matrix(self,X,Y):
+	num_classes = self.sizes[-1]
+	self.C = [np.zeros((1,self.sizes[-1])).astype(np.float32) for  x in range(0,self.sizes[-1])]
+	for (x,y) in zip(X,Y):
+		predicted = np.argmax(self.predict(x)[0]);
+		actual = np.argmax(y)
+		self.C[actual][0][predicted]+=1.0
+	print("Confusion matrix\n")
+	print(str(self.C))
+	print("\n")
+	for x in range(num_classes):
+		try:
+			if np.sum(self.C, axis=0)[0][x] != 0.0:			
+				precision = (1.0*self.C[x][0][x])/np.sum(self.C,axis=0)[0][x]
+				print("Precision for class " + str(x) + " : " + str(precision)+ "\n");
+			if np.sum(self.C, axis=1)[0][x] != 0.0:
+				recall = (1.0*self.C[x][0][x])/np.sum(self.C,axis=1)[0][x]
+				print("Recall for class " + str(x) + " : " + str(recall) + "\n");
+		except:
+			import ipdb; ipdb.set_trace()	
+			print("error")
+	
+	
+	
 
 
 
@@ -182,7 +228,53 @@ def get_feature_importance(X,Y):
 from sklearn.model_selection import StratifiedShuffleSplit
 import matplotlib.pyplot as plt
 
-def train_and_cross_validate(sizes, num_hidden=8, n_epochs=50000,eta=0.01):
+def plot_error_and_accuracy(error,iterations, accuracies, iteration):
+	plt.clf()
+        fig = plt.figure()
+        plt.plot(np.array(iterations),np.array(error))
+        plt.xlabel('epoch')
+        plt.ylabel('error')
+        fig.savefig('training_error' + '_' + str(iteration)+ '.png')
+        plt.clf()
+        fig = plt.figure()
+        plt.plot(np.array(iterations), np.array(error))
+        plt.xlabel('epoch')
+        plt.ylabel('accuracy')
+        fig.savefig('training_accuracy' + '_' + str(iteration)+ '.png')
+
+def train(nn, X_train, y_train, X_test, y_test, iteration, num_hidden=8, n_epochs=10000, eta=0.01):
+	error =[]
+        iterations = []
+        accuracies = []
+
+	for epoch in range(n_epochs):
+		for x, target in zip(X_train,y_train):
+                	outputs = nn.forward(x)
+                	nn.backpropagation( x, target,outputs,eta)
+			if epoch%1000==0:
+                        	error.append(nn.calculate_loss(X_test,y_test))
+                        	iterations.append(epoch)
+                        	accuracies.append(nn.calculate_accuracy(X_test,y_test))
+                        	nn.calculate_confusion_matrix(X_test, y_test)
+	plot_error_and_accuracy(error, iterations,accuracies,iteration)
+	
+
+def test(nn,X_test, y_test):
+	total=0
+        cnt=0
+        for data, data2 in zip(X_test,y_test):
+        	probs = nn.forward( np.array(data, dtype=np.float32))[0]
+        	total = total + 1
+        	if(np.argmax(probs)==np.argmax(data2)):
+                	cnt=cnt+1
+
+        accuracy = (1.0*cnt*100.0)/total;
+        print("Accuracy: " + str(accuracy))
+               
+
+				
+
+def train_and_cross_validate(sizes, num_hidden=8,n_epochs=50000, eta=0.01):
 	
 	X_train, X_test, y_train, y_test,X,Y = prepare_data()
 	get_feature_importance(X,Y)
@@ -197,34 +289,11 @@ def train_and_cross_validate(sizes, num_hidden=8, n_epochs=50000,eta=0.01):
     		y_train, y_test = Y[train_index], Y[test_index]
     		X_train = np.array(X_train, dtype=np.float32)
     		y_train = np.array(y_train, dtype=np.float32)
-    		error =[]
-    		iterations = []
-    		for epoch in range(n_epochs):
-        		for x, target in zip(X_train,y_train):
-	    			outputs = nn.forward(x)
-            			nn.backpropagation( x, target,outputs,eta)
-            			if epoch%100==0:
-	        			error.append(nn.calculate_loss(X_test,y_test))	
-	        			iterations.append(epoch)
-    		plt.clf()
-    		fig = plt.figure()
-    		plt.plot(np.array(iterations),np.array(error))
-    		plt.xlabel('epoch', fontsize=16)
-    		plt.ylabel('error', fontsize=16)
-    		fig.savefig('training' + '_' + str(j)+ '.png')
-    
-
-    		total=0
-    		cnt=0
-    		for data, data2 in zip(X_test,y_test):
-        		probs = nn.forward( np.array(data, dtype=np.float32))[0]
-        		total = total + 1
-        		if(np.argmax(probs)==np.argmax(data2)):	
-             			cnt=cnt+1	
-
-    		accuracy = (1.0*cnt*100.0)/total
-    		print("Accuracy: " + str(accuracy))
-    		j=j+1
+		train(nn,X_train, y_train, X_test, y_test, j);
+		test(nn, X_test, y_test)
+		np.savetxt("nn_network_weights.txt",nn._W)
+		np.savetxt("nn_network_biases.txt",nn._b)
+		j=j+1
 
 if __name__=='__main__':
 	train_and_cross_validate([9,5,4,6]);
