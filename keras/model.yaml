@@ -1,0 +1,96 @@
+backend: !!python/unicode 'tensorflow'
+class_name: Sequential
+config:
+- class_name: Dense
+  config:
+    activation: sigmoid
+    activity_regularizer: null
+    batch_input_shape: !!python/tuple [null, 93]
+    bias_constraint: null
+    bias_initializer:
+      class_name: Zeros
+      config: {}
+    bias_regularizer: null
+    dtype: float32
+    kernel_constraint: null
+    kernel_initializer:
+      class_name: RandomUniform
+      config: {maxval: 0.05, minval: -0.05, seed: null}
+    kernel_regularizer: null
+    name: dense_11
+    trainable: true
+    units: 93
+    use_bias: true
+- class_name: Dense
+  config:
+    activation: sigmoid
+    activity_regularizer: null
+    bias_constraint: null
+    bias_initializer:
+      class_name: Zeros
+      config: {}
+    bias_regularizer: null
+    kernel_constraint: null
+    kernel_initializer:
+      class_name: RandomUniform
+      config: {maxval: 0.05, minval: -0.05, seed: null}
+    kernel_regularizer: null
+    name: dense_12
+    trainable: true
+    units: 75
+    use_bias: true
+- class_name: Dense
+  config:
+    activation: tanh
+    activity_regularizer: null
+    bias_constraint: null
+    bias_initializer:
+      class_name: Zeros
+      config: {}
+    bias_regularizer: null
+    kernel_constraint: null
+    kernel_initializer:
+      class_name: RandomUniform
+      config: {maxval: 0.05, minval: -0.05, seed: null}
+    kernel_regularizer: null
+    name: dense_13
+    trainable: true
+    units: 50
+    use_bias: true
+- class_name: Dense
+  config:
+    activation: sigmoid
+    activity_regularizer: null
+    bias_constraint: null
+    bias_initializer:
+      class_name: Zeros
+      config: {}
+    bias_regularizer: null
+    kernel_constraint: null
+    kernel_initializer:
+      class_name: RandomUniform
+      config: {maxval: 0.05, minval: -0.05, seed: null}
+    kernel_regularizer: null
+    name: dense_14
+    trainable: true
+    units: 25
+    use_bias: true
+- class_name: Dense
+  config:
+    activation: softmax
+    activity_regularizer: null
+    bias_constraint: null
+    bias_initializer:
+      class_name: Zeros
+      config: {}
+    bias_regularizer: null
+    kernel_constraint: null
+    kernel_initializer:
+      class_name: RandomUniform
+      config: {maxval: 0.05, minval: -0.05, seed: null}
+    kernel_regularizer: null
+    name: dense_15
+    trainable: true
+    units: 9
+    use_bias: true
+keras_version: 2.0.1
