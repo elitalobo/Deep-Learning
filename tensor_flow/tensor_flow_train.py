@@ -94,6 +94,7 @@ sss = StratifiedShuffleSplit(n_splits=3, test_size=0.2, random_state=0)
 sss.get_n_splits(X, Y)
 j=0
 print("Got data");
+k=0
 for train_index, test_index in sss.split(X, Y):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = Y[train_index], Y[test_index]
@@ -144,15 +145,13 @@ for train_index, test_index in sss.split(X, Y):
                 			"{:.9f}".format(avg_cost))
 				cost_values.append(avg_cost)
 				iters.append(epoch)
-		import ipdb; ipdb.set_trace()
-		plt.clf()
-	        fig = plt.figure()
+	        fig = plt.figure(k)
         	plt.plot(np.array(iters),np.array(cost_values))
         	plt.title("training cost")
         	plt.ylabel('cost')
         	plt.xlabel('epoch')
         	fig.savefig("otto_tensorflow_accuracy_"+str(j))
-
+		k=k+1
     		print("Optimization Finished!")
 		save_path = saver.save(sess, str(j)+"_model_x.ckpt")
 
